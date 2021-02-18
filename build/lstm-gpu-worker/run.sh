@@ -1,0 +1,1 @@
+docker run --name lstm-gpu-worker --gpus all s0nar_lstm-gpu-worker:latest

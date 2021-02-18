@@ -1,0 +1,81 @@
+version: '3.3'
+services:
+  # ---------------------
+  # s0nar
+  # ---------------------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["app.py"]
+    ports:
+      - $APP_COMPUTER_PORT:$APP_CONTAINER_PORT
+    restart: always
+  # ---------------------
+  # MongoDB
+  # ---------------------
+  mongodb:
+    image: mongo:latest
+    environment:
+      MONGO_INITDB_DATABASE: $MONGODB_INIT_DB_DATABASE
+      MONGO_INITDB_ROOT_USERNAME: $MONGODB_USER
+      MONGO_INITDB_ROOT_PASSWORD: $MONGODB_PASSWORD
+    volumes:
+      - data-volume:/data/db
+    ports:
+      - $MONGODB_COMPUTER_PORT:$MONGODB_CONTAINER_PORT
+    restart: always
+  # ---------------------
+  # RabbitMQ
+  # ---------------------
+  rabbitmq:
+    image: rabbitmq:latest
+    environment:
+      RABBITMQ_DEFAULT_USER: $RABBITMQ_DEFAULT_USER
+      RABBITMQ_DEFAULT_PASS: $RABBITMQ_DEFAULT_PASS
+      RABBITMQ_DEFAULT_VHOST: $RABBITMQ_DEFAULT_VHOST
+    ports:
+      - $RABBITMQ_COMPUTER_PORT:$RABBITMQ_CONTAINER_PORT
+    restart: always
+  # ---------------------
+  # Flower
+  # ---------------------
+  flower:
+    image: mher/flower:latest
+    environment:
+      CELERY_BROKER_URL: amqp://$RABBITMQ_DEFAULT_USER:$RABBITMQ_DEFAULT_PASS@rabbitmq:$RABBITMQ_CONTAINER_PORT/$RABBITMQ_DEFAULT_VHOST
+      FLOWER_PORT: $CONTAINER_FLOWER_PORT
+      FLOWER_BASIC_AUTH: $FLOWER_BASIC_AUTH_USER:$FLOWER_BASIC_AUTH_PASS
+    ports:
+      - $COMPUTER_FLOWER_PORT:$CONTAINER_FLOWER_PORT
+    restart: always
+  # ---------------------
+  # s0nar arima-worker
+  # ---------------------
+  arima-worker:
+    entrypoint: /bin/sh
+    command: ["build/arima-worker/entrypoint.sh"]
+    build:
+      context: .
+      dockerfile: build/arima-worker/Dockerfile
+    restart: always
+  # ---------------------
+  # s0nar LSTM-CPU-worker
+  # ---------------------
+  lstm-cpu-worker:
+    entrypoint: /bin/sh
+    build:
+      context: .
+      dockerfile: build/lstm-cpu-worker/Dockerfile
+    restart: always
+  # ---------------------
+  # s0nar LSTM-GPU-worker
+  # ---------------------
+  lstm-gpu-worker:
+    entrypoint: /bin/sh
+    build:
+      context: .
+      dockerfile: build/lstm-gpu-worker/Dockerfile
+    restart: always
+volumes:
+  data-volume:

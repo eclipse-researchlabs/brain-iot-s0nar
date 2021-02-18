@@ -1,0 +1,55 @@
+stages:
+  - build
+  - test
+  - deploy
+
+image: python:latest
+
+before_script:
+  - pip3 install awscli
+  - cp .env.sample .env
+  - export TMPDIR=$HOME/tmp
+  - pip3 install -U pip setuptools
+  - pip3 install -r requirements.txt
+
+build:
+  stage: build
+  script:
+    - docker-compose build --no-cache api mongodb rabbitmq flower arima-worker lstm-cpu-worker
+  only:
+    refs:
+      - master
+      - merge_requests
+  tags:
+    - master
+
+test:
+  stage: test
+  script:
+    - aws s3 cp s3://brain-iot/ ~/aws/buckets/brain-iot --recursive --exclude "*" --include "*dataset.csv"
+    - aws s3 cp s3://s0nar/env/master/.env .env
+    - docker-compose up -d api mongodb
+    - export PYTHONPATH="$PYTHONPATH:."
+    - python3 -m pytest --ignore s0nar_analytics --ignore test/integration/ --cov=./ .
+  only:
+    refs:
+      - master
+      - merge_requests
+  tags:
+    - master
+
+deploy:
+  stage: deploy
+  before_script:
+    - cp .env.sample .env
+    - docker-compose down
+  script:
+    - docker-compose up -d api mongodb rabbitmq flower arima-worker lstm-cpu-worker
+    - docker run -d --rm s0nar_lstm-cpu-worker:latest
+  after_script:
+    - docker system prune -af
+  only:
+    refs:
+      - master
+  tags:
+    - master
