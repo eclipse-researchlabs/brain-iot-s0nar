@@ -6,12 +6,18 @@ ENV LANG C.UTF-8
 # Upgrade python packages
 RUN pip install pip --upgrade
 
-# Copy s0nar's code
+# Install dependencies
 ENV HOME /home/im/s0nar_arima_worker
-COPY . ${HOME}
 WORKDIR ${HOME}
 
-# Install dependencies
+COPY requirements.txt .
 RUN python3 -m pip install -r requirements.txt
+
+COPY build/ml_requirements.txt build/
 RUN python3 -m pip install -r build/ml_requirements.txt
+
+COPY build/arima-worker/custom_requirements.txt build/arima-worker/
 RUN python3 -m pip install -r build/arima-worker/custom_requirements.txt
+
+# Copy s0nar's code
+COPY . ${HOME}

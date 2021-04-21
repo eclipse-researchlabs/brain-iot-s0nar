@@ -2,29 +2,38 @@ import pandas as pd
 import numpy as np
 
 
-def detect_anomalies_from_arima(dataset, metrics, threshold, target_feature):
+def detect_anomalies_from_arima(df: pd.DataFrame, target_index, target_feature,  window: int, std_level=2):
     """
-    Detect anomalies using auto-arima tuning metrics
-
-    :param dataset: dataset to analyze
-    :param metrics: list with auto-arima training metrics
-    :param threshold: anomaly detection threshold
-    :param target_feature: feature to analyze
-
-    :return: anomalies dataframe
+    Script for anomaly detection given a dataframe containing actuals and forecasted values
     """
-    fill_empty_train = [0] * (len(dataset) - len(metrics))
-    fill_empty_train.extend(metrics)
-    metrics = fill_empty_train
-    norm_metrics = [float(i) / sum(metrics) for i in metrics]
-    dataset['metrics'] = norm_metrics
-    df_anomalies = dataset[dataset.metrics > threshold]
 
-    anomalies = pd.DataFrame()
+    # Replace nulls by 0
+    df.replace([np.inf, -np.inf], np.NaN, inplace=True)
+    df.fillna(0, inplace=True)
 
-    anomalies['date'] = df_anomalies['date']
-    anomalies[target_feature] = df_anomalies[target_feature]
-    anomalies['distance'] = df_anomalies['metrics']
+    df["actuals_rolling"] = df[target_feature].rolling(window=window).mean()
+    df["predicted_rolling"] = df["predicted"].rolling(window=window).mean()
+
+    # Get error rate as difference between actual values and predicted values
+    df["error"] = df["actuals_rolling"] - df["predicted_rolling"]
+
+    error_mean = df["error"].mean()
+    error_std = df["error"].std()
+
+    upper_lim = error_mean + std_level * error_std
+    lower_lim = error_mean - std_level * error_std
+
+    df["upper_lim"] = upper_lim
+    df["lower_lim"] = lower_lim
+
+    # Determine anomalies as samples exceeding certain deviation values
+    anomaly = (df["error"] >= upper_lim) | (df["error"] <= lower_lim)
+
+    df["anomaly_points"] = anomaly
+
+    df["distance"] = abs(df[target_feature] - df.predicted)
+
+    anomalies = df[df.anomaly_points][[target_index, target_feature, 'distance']]
 
     return anomalies
 

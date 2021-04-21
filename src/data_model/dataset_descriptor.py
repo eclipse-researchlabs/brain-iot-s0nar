@@ -14,10 +14,10 @@ class DatasetDescriptor(db.EmbeddedDocument):
         index_schema: A StringField or list of StringField indicating the fields were the data of the dataset is located
     """
     target_feature = db.StringField(required=True, regex='^(([a-zA-Z0-9]+)|([a-zA-Z0-9]+[_][a-zA-Z0-9]+))$')
-    target_frequency = db.StringField(required=False, regex='^((([1-9]|[12][0-9]|3[01])[Dd])|(([1-9]|[1][0-9]|[2][0-3])[hH])|(([1-9]|[1-5][0-9])[mMsS]))$')
+    target_frequency = db.StringField(required=False, regex='^((([1-9]|[12][0-9]|3[01])[Dd])|(([1-9]|[1][0-9]|[2][0-3])[hH])|(([1-9]|[1-5][0-9])[TsS]))$')
     index = db.StringField(required=True, regex='^(([a-zA-Z0-9]+)|([a-zA-Z0-9]+[_][a-zA-Z0-9]+))$')
     index_schema = db.StringField(required=False, regex='.*[%].+')
-    index_frequency = db.StringField(required=False, regex='^((([1-9]|[12][0-9]|3[01])[Dd])|(([1-9]|[1][0-9]|[2][0-3])[hH])|(([1-9]|[1-5][0-9])[mMsS]))$')
+    index_frequency = db.StringField(required=False, regex='^((([1-9]|[12][0-9]|3[01])[Dd])|(([1-9]|[1][0-9]|[2][0-3])[hH])|(([1-9]|[1-5][0-9])[TsS]))$')
     field_separator = db.StringField(required=False)
 
 

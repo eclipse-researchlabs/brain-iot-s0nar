@@ -3,6 +3,8 @@ from src.blueprints.utils.api_key import require_api_key
 from src.data_model.anomaly_report import AnomalyReport
 
 anomaly_blueprint = Blueprint("anomaly", __name__)
+
+
 @anomaly_blueprint.route('/s0nar/v1/anomaly/<anomaly_id>', methods=['GET'])
 @require_api_key
 def get_anomaly_report(anomaly_id):
@@ -12,7 +14,7 @@ def get_anomaly_report(anomaly_id):
     parameters:
       - in: path
         name: anomaly_id
-        type: int
+        type: string
         required: true
     responses:
       200:
@@ -49,6 +51,32 @@ def get_all_reports():
             filters['model'] = request.get_json().get('model')
 
     response = [report.to_mongo().to_dict() for report in AnomalyReport.find_all(filters)]
+    return jsonify(response), 200
+
+
+@anomaly_blueprint.route('/s0nar/v1/model/<model_id>/anomaly', methods=['GET'])
+@require_api_key
+def get_all_reports_by_model(model_id):
+    """
+    Get all reports filtered by model
+    ---
+    parameters:
+      - in: path
+        name: model_id
+        type: string
+        required: true
+    responses:
+      200:
+        description: Success
+
+    Retrieves all anomalies reports for the given model
+
+    :return: list with all persisted reports
+    """
+    response = [report.to_mongo().to_dict() for report in AnomalyReport.find_all({
+      'model': model_id
+    })]
+
     return jsonify(response), 200
 
 

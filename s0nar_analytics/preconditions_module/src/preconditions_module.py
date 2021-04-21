@@ -4,7 +4,7 @@ from s0nar_analytics.data_models import extended_dataset
 THRESHOLD = 0.2
 
 
-def interpolation(df_data: pd.DataFrame, delta_limit: pd.Timedelta = pd.Timedelta(10, 'd'), std_limit: float = 0.5):
+def interpolation(df_data: pd.DataFrame, index_frequency, delta_limit: pd.Timedelta = pd.Timedelta(10, 'd'), std_limit: float = 0.5):
     """
     Evaluates if it is possible to interpolate a data series and interpolates if the conditions are acomplish
     :param df_data: Dataframe
@@ -22,7 +22,11 @@ def interpolation(df_data: pd.DataFrame, delta_limit: pd.Timedelta = pd.Timedelt
     if (df_norm.std() > std_limit).any():
         return False, df_data
     # interpolation
-    freq_index = pd.date_range(df_data.index[0], df_data.index[-1], normalize=True, freq=pd.infer_freq(df_data.index))
+    freq_index = pd.date_range(df_data.index[0], df_data.index[-1], normalize=False, freq=index_frequency)
+
+    # Remove possible duplicated indexes
+    df_data = df_data[~df_data.index.duplicated(keep="first")]
+
     df_reindex = df_data.reindex(freq_index)
     df_reindex.interpolate(inplace=True, method='linear') # limit parameter
     return True, df_reindex
@@ -58,7 +62,7 @@ def resample(extended_data: extended_dataset.ExtendedDataset, percent_gaps: floa
     return True, extended_data
 
 
-def valid_size(df_index: pd.DatetimeIndex, seasonality: int, min_size: int = 20) -> bool:
+def valid_size(df_index: pd.DatetimeIndex, seasonality: int, min_size: int = 0) -> bool:
     """
     Validation of the size of the dataframe
     :param df_index: Dataframe index to validate
@@ -66,18 +70,18 @@ def valid_size(df_index: pd.DatetimeIndex, seasonality: int, min_size: int = 20)
     :param min_size: Minimum size allowed of the number of data points per seasonality frequency
     :return: The success of the validation
     """
-    freq_index = pd.date_range(df_index[0], df_index[-1], normalize=True, freq=seasonality)
+    freq_index = pd.date_range(df_index[0], df_index[-1], normalize=False, freq=seasonality)
     if seasonality.components[0] != 0:
-        freq_index = freq_index[freq_index.floor('D').isin(df_index)]
+        freq_index = freq_index[freq_index.floor('D').isin(df_index.floor('D'))]
     elif seasonality.components[1] != 0:
-        freq_index = freq_index[freq_index.floor('H').isin(df_index)]
+        freq_index = freq_index[freq_index.floor('H').isin(df_index.floor('H'))]
     elif seasonality.components[2] != 0:
-        freq_index = freq_index[freq_index.floor('M').isin(df_index)]
+        freq_index = freq_index[freq_index.floor('T').isin(df_index.floor('T'))]
     elif seasonality.components[3] != 0:
-        freq_index = freq_index[freq_index.floor('S').isin(df_index)]
+        freq_index = freq_index[freq_index.floor('S').isin(df_index.floor('S'))]
     else:
-        freq_index = freq_index[freq_index.floor('s').isin(df_index)]
-    return freq_index.size > min_size
+        freq_index = freq_index[freq_index.floor('s').isin(df_index.floor('s'))]
+    return freq_index.size >= min_size
 
 
 def valid_freq(extended_data: extended_dataset.ExtendedDataset, error: float = 0.2) -> bool:
@@ -100,13 +104,21 @@ def all_preconditions(extended_data: extended_dataset.ExtendedDataset):
     :return: the achievement of the preconditions by the dataframe and the dataframe modified if necessary
     """
     if valid_size(extended_data.data.index, seasonality=extended_data.index_freq):
-        # Fill small gaps if possible
-        interpolated, extended_data.data = interpolation(extended_data.data, delta_limit=extended_data.index_freq * 5)
-        if extended_data.operation == 'prediction':
-            resampled, new_data = resample(extended_data)
-            if resampled:
-                extended_data = new_data
-                return resampled, extended_data
-        if valid_freq(extended_data):
+        if len(extended_data.data.index) > 2:
+            # Fill small gaps if possible
+            interpolated, extended_data.data = interpolation(
+                extended_data.data,
+                index_frequency=extended_data.index_freq,
+                delta_limit=extended_data.index_freq * 5
+            )
+            if extended_data.operation == 'prediction':
+                resampled, new_data = resample(extended_data)
+                if resampled:
+                    extended_data = new_data
+                    return resampled, extended_data
+        if len(extended_data.data.index) > 1:
+            if valid_freq(extended_data):
+                return True, extended_data
+        else:
             return True, extended_data
     return False, None

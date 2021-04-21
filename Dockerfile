@@ -6,10 +6,11 @@ ENV LANG C.UTF-8
 # Upgrade python packages
 RUN pip install pip --upgrade
 
-# Copy s0nar's code
-ENV HOME /home/im/s0nar
-COPY . ${HOME}
-WORKDIR ${HOME}
-
 # Install dependencies
+ENV HOME /home/im/s0nar
+WORKDIR ${HOME}
+COPY requirements.txt .
 RUN python3 -m pip install -r requirements.txt
+
+# Copy s0nar's code
+COPY . ${HOME}

@@ -67,9 +67,13 @@ def create_dataset():
     # Feature selection
     dataset = analysis_module.feature_selection(dataset)
 
-    descriptors = DatasetDescriptor(index=dataset.index, target_feature=dataset.target_feature,
-                                    target_frequency=frequency, index_schema=dataset.index_schema,
-                                    index_frequency=dataset.freq_to_str())
+    descriptors = DatasetDescriptor(
+      index=dataset.index,
+      target_feature=dataset.target_feature,
+      target_frequency=frequency,
+      index_schema=dataset.index_schema,
+      index_frequency=index_freq
+    )
     dataset = Dataset(name=name, descriptors=descriptors)
     # dataset.set_descriptors(descriptors)
     dataset.create(path)

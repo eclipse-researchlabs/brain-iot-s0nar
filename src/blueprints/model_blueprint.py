@@ -67,7 +67,7 @@ def create_model(dataset_id):
     type = ModelTypes(request.get_json().get('type').upper())
     target_feature = request.get_json()['target_feature']
     index_feature = request.get_json()['index']
-    index_schema = request.get_json()['index_schema']
+    index_schema = request.get_json().get('index_schema')
     hyper_parameters = request.get_json().get('hyper_parameters', dict())
 
     model = Model(dataset=dataset,

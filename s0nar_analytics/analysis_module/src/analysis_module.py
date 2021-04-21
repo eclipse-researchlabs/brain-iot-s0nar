@@ -82,6 +82,6 @@ def feature_selection(extended_data: extended_dataset.ExtendedDataset, plot_opti
             conflicts_matrix.drop(conflicts, axis=0, inplace=True)
             index += 1
         df_solution = extended_data.data[iterable]  # Add co-variables
-    df_solution.loc[extended_data.target_feature] = extended_data.data[extended_data.target_feature] # Add target variables
-    extended_data.data = df_solution
+        df_solution.loc[extended_data.target_feature] = extended_data.data[extended_data.target_feature] # Add target variables
+        extended_data.data = df_solution
     return extended_data

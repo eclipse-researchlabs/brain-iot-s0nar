@@ -63,7 +63,7 @@ services:
   # s0nar LSTM-CPU-worker
   # ---------------------
   lstm-cpu-worker:
-    entrypoint: /bin/sh
+    # entrypoint: /bin/sh
     build:
       context: .
       dockerfile: build/lstm-cpu-worker/Dockerfile

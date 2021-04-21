@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def load_dataset_from_path(dataset_path, index="", schema=""):
+def load_dataset_from_path(dataset_path, index="", schema=None):
     """
     Load dataset from local path
 
@@ -10,7 +10,12 @@ def load_dataset_from_path(dataset_path, index="", schema=""):
     :param schema: schema for the index parser
     :return: dataframe to analyze
     """
-    date_parse = lambda x: pd.datetime.strptime(x, schema)
+
+    if schema:
+        date_parse = lambda x: pd.to_datetime(x, format=schema)
+    else:
+        date_parse = lambda x: x
+
     if index == "":
         df = pd.read_csv(dataset_path, index_col=0, header=0)
     elif schema == "":

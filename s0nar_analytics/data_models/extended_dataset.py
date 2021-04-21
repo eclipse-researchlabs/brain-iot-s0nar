@@ -14,9 +14,10 @@ class ExtendedDataset(object):
 
     def __init__(self, path, index, feature, target_freq, index_freq=None, index_schema=None, field_separator=',',
                  operation=OperationType.BOTH):
-        dateparse = None
         if index_schema:
-            dateparse = lambda x: pd.datetime.strptime(x, index_schema)
+            dateparse = lambda x: pd.to_datetime(x, format=index_schema)
+        else:
+            dateparse = lambda x: pd.to_datetime(x, unit="ms")
         df_data = pd.read_csv(path, sep=field_separator, header=0, parse_dates=[index], date_parser=dateparse, index_col=0)
         df_data.columns = df_data.columns.str.strip()
         self.data = df_data

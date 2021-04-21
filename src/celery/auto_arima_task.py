@@ -3,8 +3,9 @@ import os
 from src import celery_app, celery_logger
 from src.celery.ml.anomaly import detect_anomalies_from_arima
 from src.celery.ml.dataset import load_dataset_from_path
-from src.celery.ml.model.auto_arima import train_arima_model_and_get_mae
 from src.celery.ml.persist.auto_arima import persist_autoarima
+import src.celery.ml.model.auto_arima as auto_arima_model
+import src.celery.ml.anomaly as anomaly_detector
 from src.data_model.anomaly_report import AnomalyReport
 from src.data_model.model import Model, ModelStatus
 from src.data_source.aws import retrieve_file_from_s3, FileType, save_file_in_s3
@@ -21,6 +22,10 @@ def arima(model_id, persists=True):
     :return: None
     :raise Exception: when some internal error happens
     """
+    DEFAULT_STD_LEVEL = 2
+    DEFAULT_WINDOW = 3
+    DEFAULT_MAX_SIZE = 2000
+
     celery_logger.info('=============================================')
     celery_logger.info('Retrieve model from database')
     celery_logger.info('=============================================')
@@ -42,7 +47,14 @@ def arima(model_id, persists=True):
         celery_logger.info('=============================================')
         celery_logger.info('Train model and obtain metrics')
         celery_logger.info('=============================================')
-        predict_model, metrics = train_arima_model_and_get_mae(dataset, model.target_feature, int(minimum_elements))
+
+        max_size = DEFAULT_MAX_SIZE
+
+        predict_model, df_forecast = auto_arima_model.forecasting_arima(
+            dataset[-max_size:],
+            model.index_feature,
+            model.target_feature
+        )
 
         celery_logger.info('=============================================')
         celery_logger.info('Persisting model')
@@ -60,11 +72,20 @@ def arima(model_id, persists=True):
         celery_logger.info('=============================================')
         celery_logger.info('Anomaly detection and report creation')
         celery_logger.info('=============================================')
-        threshold = model.hyper_parameters.get('threshold', 0.01)
-        anomaly_info = detect_anomalies_from_arima(dataset, metrics, threshold, model.target_feature)
+        std_level = model.hyper_parameters.get('threshold', DEFAULT_STD_LEVEL)
+
+        anomaly_info = anomaly_detector.detect_anomalies_from_arima(
+            df_forecast,
+            model.index_feature,
+            model.target_feature,
+            window=DEFAULT_WINDOW,
+            std_level=std_level
+        )
+
         report = AnomalyReport(model=model, anomalies=list(anomaly_info.T.to_dict().values()), params={
-            'threshold': threshold
+            'threshold': std_level
         })
+
         report.save()
         return None
     except Exception as ex:
